@@ -48,7 +48,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
   const {
     title, destination, description,
     start_date, end_date, price,
-    max_seats, waitlist_enabled,
+    max_seats, waitlist_enabled, waitlist_limit,
     registration_open_at, registration_close_at,
     venue, venue_description,
     confirmation_message, notification_email,
@@ -60,17 +60,17 @@ router.post('/', authenticateAdmin, async (req, res) => {
       `INSERT INTO itineraries (
          title, destination, description,
          start_date, end_date, price,
-         max_seats, available_seats, waitlist_enabled,
+         max_seats, available_seats, waitlist_enabled, waitlist_limit,
          registration_open_at, registration_close_at,
          venue, venue_description,
          confirmation_message, notification_email,
          status, tags
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         title, destination, description || null,
         start_date, end_date, price,
-        max_seats || 20, waitlist_enabled || false,
+        max_seats || 20, waitlist_enabled || false, waitlist_limit || null,
         registration_open_at || null, registration_close_at || null,
         venue || null, venue_description || null,
         confirmation_message || null, notification_email || null,
@@ -89,7 +89,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
   const {
     title, destination, description,
     start_date, end_date, price,
-    max_seats, waitlist_enabled,
+    max_seats, waitlist_enabled, waitlist_limit,
     registration_open_at, registration_close_at,
     venue, venue_description,
     cover_image, custom_fields,
@@ -108,23 +108,25 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
          price = COALESCE($6, price),
          max_seats = COALESCE($7, max_seats),
          waitlist_enabled = COALESCE($8, waitlist_enabled),
-         registration_open_at = $9,
-         registration_close_at = $10,
-         venue = COALESCE($11, venue),
-         venue_description = COALESCE($12, venue_description),
-         cover_image = COALESCE($13, cover_image),
-         custom_fields = COALESCE($14, custom_fields),
-         confirmation_message = COALESCE($15, confirmation_message),
-         notification_email = COALESCE($16, notification_email),
-         status = COALESCE($17, status),
-         tags = COALESCE($18, tags),
+         waitlist_limit = $9,
+         registration_open_at = $10,
+         registration_close_at = $11,
+         venue = COALESCE($12, venue),
+         venue_description = COALESCE($13, venue_description),
+         cover_image = COALESCE($14, cover_image),
+         custom_fields = COALESCE($15, custom_fields),
+         confirmation_message = COALESCE($16, confirmation_message),
+         notification_email = COALESCE($17, notification_email),
+         status = COALESCE($18, status),
+         tags = COALESCE($19, tags),
          updated_at = NOW()
-       WHERE id = $19
+       WHERE id = $20
        RETURNING *`,
       [
         title, destination, description,
         start_date, end_date, price,
         max_seats, waitlist_enabled,
+        waitlist_limit ?? null,
         registration_open_at ?? null, registration_close_at ?? null,
         venue, venue_description,
         cover_image, custom_fields ? JSON.stringify(custom_fields) : null,

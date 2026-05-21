@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS itineraries (
   max_seats INTEGER DEFAULT 20,
   available_seats INTEGER DEFAULT 20,
   waitlist_enabled BOOLEAN DEFAULT FALSE,
+  waitlist_limit INTEGER,                              -- NULL = 無上限
   -- 報名時間
   registration_open_at TIMESTAMPTZ,            -- NULL = 立即開放
   registration_close_at TIMESTAMPTZ,           -- NULL = 活動當天 23:59
