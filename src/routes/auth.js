@@ -150,7 +150,7 @@ router.post('/user/reset-password', async (req, res) => {
 router.get('/user/me', authenticateUser, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, name, email, phone, status, created_at FROM users WHERE id = $1`,
+      `SELECT id, name, email, phone, birthday, gender, id_number, status, created_at FROM users WHERE id = $1`,
       [req.user.id]
     );
     if (rows.length === 0) return res.status(404).json({ message: '找不到用戶' });
@@ -163,14 +163,20 @@ router.get('/user/me', authenticateUser, async (req, res) => {
 
 // ── 用戶：更新個人資料 ────────────────────────────────────────
 router.patch('/user/me', authenticateUser, async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, birthday, gender, id_number } = req.body;
   try {
     const { rows } = await pool.query(
-      `UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email),
-       phone = COALESCE($3, phone), updated_at = NOW()
-       WHERE id = $4
-       RETURNING id, name, email, phone, status, created_at`,
-      [name, email, phone, req.user.id]
+      `UPDATE users SET
+         name = COALESCE($1, name),
+         email = COALESCE($2, email),
+         phone = COALESCE($3, phone),
+         birthday = COALESCE($4, birthday),
+         gender = COALESCE($5, gender),
+         id_number = COALESCE($6, id_number),
+         updated_at = NOW()
+       WHERE id = $7
+       RETURNING id, name, email, phone, birthday, gender, id_number, status, created_at`,
+      [name, email, phone, birthday || null, gender || null, id_number || null, req.user.id]
     );
     res.json(rows[0]);
   } catch (err) {

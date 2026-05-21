@@ -90,14 +90,19 @@ router.get('/my/:id', authenticateUser, async (req, res) => {
   }
 });
 
-// 後台：取得所有訂單
+// 後台：取得所有訂單（含報名個資）
 router.get('/admin/all', authenticateAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT o.*, i.title as itinerary_title, u.name as user_name, u.email as user_email
+      `SELECT o.*,
+              i.title as itinerary_title,
+              u.name as user_name, u.email as user_email,
+              r.id as reg_id, r.id_number, r.birthday, r.gender,
+              r.custom_field_data, r.note as reg_note, r.status as reg_status
        FROM orders o
        LEFT JOIN itineraries i ON o.itinerary_id = i.id
        LEFT JOIN users u ON o.user_id = u.id
+       LEFT JOIN registrations r ON r.order_id = o.id
        ORDER BY o.created_at DESC`
     );
     res.json(rows);
