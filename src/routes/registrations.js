@@ -20,16 +20,28 @@ router.get('/', authenticateAdmin, async (req, res) => {
   }
 });
 
-// 公開/用戶：提交報名（不需登入，舊有功能保留）
+// 公開/用戶：提交報名
 router.post('/', async (req, res) => {
-  const { itinerary_id, applicant_name, email, phone, id_number, note } = req.body;
-  if (!applicant_name || !email) return res.status(400).json({ message: '請填寫姓名和 Email' });
+  const { order_id, itinerary_id, applicant_name, email, phone, id_number, birthday, gender, custom_field_data, note } = req.body;
+  if (!applicant_name) return res.status(400).json({ message: '請填寫姓名' });
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO registrations (itinerary_id, applicant_name, email, phone, id_number, note)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [itinerary_id || null, applicant_name, email, phone || null, id_number || null, note || null]
+      `INSERT INTO registrations
+         (order_id, itinerary_id, applicant_name, email, phone, id_number, birthday, gender, custom_field_data, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [
+        order_id || null,
+        itinerary_id || null,
+        applicant_name,
+        email || null,
+        phone || null,
+        id_number || null,
+        birthday || null,
+        gender || null,
+        custom_field_data ? JSON.stringify(custom_field_data) : '{}',
+        note || null,
+      ]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
