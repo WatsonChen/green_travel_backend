@@ -10,39 +10,45 @@ const router = express.Router();
 
 // ── 用戶：Email 註冊 ──────────────────────────────────────────
 router.post('/user/register', async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, id_number, birthday, gender } = req.body;
   if (!email && !phone) return res.status(400).json({ message: '請提供 Email 或電話' });
-  if (email && !password) return res.status(400).json({ message: '請提供密碼' });
+  if (!password) return res.status(400).json({ message: '請提供密碼' });
 
   try {
-    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+    const passwordHash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      `INSERT INTO users (name, email, phone, password_hash)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, phone, status, created_at`,
-      [name, email || null, phone || null, passwordHash]
+      `INSERT INTO users (name, email, phone, password_hash, id_number, birthday, gender)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, email, phone, id_number, birthday, gender, status, created_at`,
+      [name, email || null, phone || null, passwordHash, id_number || null, birthday || null, gender || null]
     );
     const token = jwt.sign({ id: rows[0].id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: rows[0] });
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ message: 'Email 或電話已被使用' });
+    if (err.code === '23505') return res.status(409).json({ message: 'Email、電話或身分證號已被使用' });
     console.error(err);
     res.status(500).json({ message: '伺服器錯誤' });
   }
 });
 
-// ── 用戶：Email 登入 ──────────────────────────────────────────
+// ── 用戶：Email 或身分證號登入 ────────────────────────────────
 router.post('/user/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: '請輸入 Email 和密碼' });
+  const { email, id_number, password } = req.body;
+  if (!email && !id_number) return res.status(400).json({ message: '請輸入 Email 或身分證號' });
+  if (!password) return res.status(400).json({ message: '請輸入密碼' });
 
   try {
-    const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+    let rows;
+    if (id_number) {
+      ({ rows } = await pool.query(`SELECT * FROM users WHERE id_number = $1`, [id_number]));
+    } else {
+      ({ rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]));
+    }
     const user = rows[0];
-    if (!user || !user.password_hash) return res.status(401).json({ message: 'Email 或密碼錯誤' });
+    if (!user || !user.password_hash) return res.status(401).json({ message: '帳號或密碼錯誤' });
 
     const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) return res.status(401).json({ message: 'Email 或密碼錯誤' });
+    if (!match) return res.status(401).json({ message: '帳號或密碼錯誤' });
 
     const token = jwt.sign({ id: user.id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const { password_hash, ...safeUser } = user;

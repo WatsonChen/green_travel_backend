@@ -4,14 +4,33 @@ const { authenticateAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// 公開：已上架行程
+// 公開：已上架行程（支援 ?destination=&tag=&month= 篩選）
 router.get('/', async (req, res) => {
   try {
+    const { destination, tag, month } = req.query;
+    const conditions = [`status = 'published'`];
+    const params = [];
+
+    if (destination) {
+      params.push(`%${destination}%`);
+      conditions.push(`destination ILIKE $${params.length}`);
+    }
+    if (tag) {
+      params.push(tag);
+      conditions.push(`$${params.length} = ANY(tags)`);
+    }
+    if (month) {
+      params.push(month);
+      conditions.push(`TO_CHAR(start_date, 'YYYY-MM') = $${params.length}`);
+    }
+
+    const where = conditions.join(' AND ');
     const { rows } = await pool.query(
       `SELECT id, title, destination, description, start_date, end_date, price,
               available_seats, max_seats, waitlist_enabled, venue, cover_image, tags,
               registration_open_at, registration_close_at
-       FROM itineraries WHERE status = 'published' ORDER BY start_date ASC`
+       FROM itineraries WHERE ${where} ORDER BY start_date ASC`,
+      params
     );
     res.json(rows);
   } catch (err) {
@@ -118,8 +137,9 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
          notification_email = COALESCE($16, notification_email),
          status = COALESCE($17, status),
          tags = COALESCE($18, tags),
+         contract_text = COALESCE($19, contract_text),
          updated_at = NOW()
-       WHERE id = $19
+       WHERE id = $20
        RETURNING *`,
       [
         title, destination, description,
@@ -130,6 +150,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
         cover_image, custom_fields ? JSON.stringify(custom_fields) : null,
         confirmation_message, notification_email,
         status, tags,
+        req.body.contract_text ?? null,
         req.params.id,
       ]
     );

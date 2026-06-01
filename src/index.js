@@ -9,6 +9,8 @@ const memberRoutes = require('./routes/members');
 const orderRoutes = require('./routes/orders');
 const registrationRoutes = require('./routes/registrations');
 const paymentRoutes = require('./routes/payments');
+const formTemplateRoutes = require('./routes/form-templates');
+const signatureRoutes = require('./routes/signatures');
 
 const app = express();
 
@@ -40,6 +42,8 @@ app.use('/api/members', memberRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/form-templates', formTemplateRoutes);
+app.use('/api/signatures', signatureRoutes);
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 

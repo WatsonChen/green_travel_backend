@@ -90,6 +90,28 @@ router.get('/my/:id', authenticateUser, async (req, res) => {
   }
 });
 
+// 用戶：修改付款方式（僅限未付款訂單）
+router.patch('/my/:id/payment-method', authenticateUser, async (req, res) => {
+  const { payment_method } = req.body;
+  const allowed = ['credit_card', 'atm', 'web_atm', 'cvs'];
+  if (!payment_method || !allowed.includes(payment_method)) {
+    return res.status(400).json({ message: '無效的付款方式' });
+  }
+  try {
+    const { rows } = await pool.query(
+      `UPDATE orders SET payment_method = $1, updated_at = NOW()
+       WHERE id = $2 AND user_id = $3 AND payment_status = 'unpaid'
+       RETURNING *`,
+      [payment_method, req.params.id, req.user.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ message: '找不到可修改的訂單（已付款或不存在）' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '伺服器錯誤' });
+  }
+});
+
 // 後台：取得所有訂單（含報名個資）
 router.get('/admin/all', authenticateAdmin, async (req, res) => {
   try {

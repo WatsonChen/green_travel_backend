@@ -26,6 +26,17 @@ router.post('/', async (req, res) => {
   if (!applicant_name) return res.status(400).json({ message: '請填寫姓名' });
 
   try {
+    if (id_number && itinerary_id) {
+      const { rows: dup } = await pool.query(
+        `SELECT id FROM registrations
+         WHERE itinerary_id = $1 AND id_number = $2 AND status != 'cancelled'`,
+        [itinerary_id, id_number]
+      );
+      if (dup.length > 0) {
+        return res.status(409).json({ message: `身分證號 ${id_number} 已報名此行程，請勿重複報名` });
+      }
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO registrations
          (order_id, itinerary_id, applicant_name, email, phone, id_number, birthday, gender, custom_field_data, note)
